@@ -1,0 +1,36 @@
+{
+  "name": "torob-ejareh",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest run",
+    "seed": "node --import tsx scripts/generate-seed.ts",
+    "data": "node --import tsx scripts/build-data.ts",
+    "ingest": "node --import tsx scripts/ingest.ts"
+  },
+  "dependencies": {
+    "@fontsource/vazirmatn": "^5.3.0",
+    "leaflet": "^1.9.4",
+    "next": "^15.5.29",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-leaflet": "^5.0.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "postcss": "^8.5.33",
+    "tailwindcss": "^4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "5.8",
+    "vitest": "^5.1.1"
+  }
+}

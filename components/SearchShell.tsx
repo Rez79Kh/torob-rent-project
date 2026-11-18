@@ -1,0 +1,242 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ClientData } from "@/lib/data";
+import { explainTop } from "@/lib/explain";
+import { DEFAULT_INTENT, parseIntentRules } from "@/lib/intent/rules";
+import { toPersianDigits } from "@/lib/persian";
+import { rankMarket, REJECT_LABEL } from "@/lib/rank";
+import type { Explanation, UserIntent } from "@/lib/types";
+import CashBar from "./CashBar";
+import IntentInput from "./IntentInput";
+import PipelineInspector from "./PipelineInspector";
+import PropertyCard from "./PropertyCard";
+
+const MarketMap = dynamic(() => import("./MarketMap"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full animate-pulse rounded-2xl bg-gray-100" />,
+});
+
+const PAGE = 30;
+
+export default function SearchShell({ data, llmEnabled }: { data: ClientData; llmEnabled: boolean }) {
+  const [intent, setIntent] = useState<UserIntent>(DEFAULT_INTENT);
+  const [parsing, setParsing] = useState(false);
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [inspectId, setInspectId] = useState<string | null>(null);
+  const [showRejected, setShowRejected] = useState(false);
+  const [limit, setLimit] = useState(PAGE);
+  const [mobileMap, setMobileMap] = useState(false);
+  const [llmExplain, setLlmExplain] = useState<Explanation | null>(null);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const out = useMemo(() => {
+    const t = performance.now();
+    const r = rankMarket(data, intent);
+    return { ...r, ms: performance.now() - t };
+  }, [data, intent]);
+
+  const templateExplain = useMemo(() => explainTop(out.ranked, intent), [out.ranked, intent]);
+  const topKey = out.ranked.slice(0, 3).map((r) => `${r.cluster.clusterId}:${r.effectiveMonthly}`).join("|");
+
+  useEffect(() => {
+    setLlmExplain(null);
+    if (!llmEnabled || out.ranked.length < 2) return;
+    const ctrl = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/explain", {
+          method: "POST",
+          signal: ctrl.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bullets: templateExplain.bullets }),
+        });
+        if (res.ok) setLlmExplain((await res.json()) as Explanation);
+      } catch {
+        /* template stays */
+      }
+    }, 700);
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topKey, llmEnabled]);
+
+  const explanation = llmExplain?.bullets.length ? llmExplain : templateExplain;
+
+  const onQuery = useCallback(
+    async (q: string) => {
+      const local = parseIntentRules(q, { ...intent, rawQuery: q });
+      setIntent(local);
+      setLimit(PAGE);
+      if (!llmEnabled || !q.trim()) return;
+      setParsing(true);
+      try {
+        const res = await fetch("/api/parse", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ q, base: { ...intent, rawQuery: q } }),
+        });
+        if (res.ok) setIntent((await res.json()) as UserIntent);
+      } catch {
+        /* rules result stays */
+      } finally {
+        setParsing(false);
+      }
+    },
+    [intent, llmEnabled],
+  );
+
+  const listRef = useRef<HTMLDivElement>(null);
+  const selectFromMap = useCallback((clusterId: string) => {
+    setSelectedId(clusterId);
+    const el = document.getElementById(`card-${clusterId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
+  const totalListings = data.listings.length;
+  const inspected = inspectId ? [...out.ranked, ...out.rejected].find((r) => r.cluster.clusterId === inspectId) : null;
+
+  return (
+    <div className="min-h-screen">
+      <header className="border-b border-line bg-white">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-xl font-black text-white">ت</div>
+            <div>
+              <h1 className="text-lg font-black leading-tight">
+                ترب <span className="text-brand">اجاره</span>
+              </h1>
+              <p className="text-xs text-muted">کل بازار رهن و اجارهٔ تهران، مرتب‌شده با پول نقد شما</p>
+            </div>
+          </div>
+          <div className="hidden items-center gap-4 text-xs text-muted md:flex">
+            <span className="num">
+              {toPersianDigits(data.stats.rawCount)} آگهی خام از دیوار، شیپور و کیلید
+            </span>
+            <span className="h-4 w-px bg-line" />
+            <span className="num">{toPersianDigits(data.clusters.length)} ملک یکتا</span>
+          </div>
+        </div>
+      </header>
+
+      <CashBar intent={intent} onChange={(i) => setIntent(i)} />
+
+      <div className="mx-auto max-w-[1400px] px-4">
+        <IntentInput intent={intent} parsing={parsing} llmEnabled={llmEnabled} onQuery={onQuery} onChange={setIntent} />
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-white px-4 py-2.5 text-sm shadow-sm ring-1 ring-line">
+          <span className="font-bold num">{toPersianDigits(out.ranked.length)} ملک مناسب شما</span>
+          {out.unlockedCount > 0 && (
+            <span className="num text-good">
+              | {toPersianDigits(out.unlockedCount)} تا فقط با تبدیل ودیعه باز شدند
+              <span className="text-muted"> (فیلتر دیوار نشانشان نمی‌داد)</span>
+            </span>
+          )}
+          <span className="num text-muted">
+            | {toPersianDigits(totalListings - data.clusters.length)} آگهی تکراری ادغام شد | {toPersianDigits(data.stats.droppedNoise)} آگهی بی‌کیفیت حذف شد
+          </span>
+          {mounted && (
+            <span className="num ms-auto text-[11px] text-muted" title="زمان رتبه‌بندی کل بازار در مرورگر">
+              رتبه‌بندی کل بازار در {toPersianDigits(Math.max(out.ms, 0.1).toFixed(1))} میلی‌ثانیه
+            </span>
+          )}
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 pb-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
+          <div ref={listRef} className="flex flex-col gap-3">
+            {out.ranked.length === 0 && (
+              <div className="rounded-2xl bg-white p-8 text-center ring-1 ring-line">
+                <p className="text-lg font-bold">با این پول و سقف اجاره چیزی پیدا نشد</p>
+                <p className="mt-2 text-sm text-muted">
+                  اسلایدر پول نقد یا سقف اجاره را کمی جابه‌جا کنید؛ بیشترین دلیل حذف:{" "}
+                  {REJECT_LABEL[Object.entries(out.rejectCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "cash"]}
+                </p>
+              </div>
+            )}
+            {out.ranked.slice(0, limit).map((r, i) => (
+              <PropertyCard
+                key={r.cluster.clusterId}
+                rank={i + 1}
+                result={r}
+                data={data}
+                cash={intent.cash}
+                userRate={intent.userRate}
+                explanation={i === 0 ? explanation : undefined}
+                active={hoverId === r.cluster.clusterId || selectedId === r.cluster.clusterId}
+                onHover={setHoverId}
+                onInspect={setInspectId}
+              />
+            ))}
+            {out.ranked.length > limit && (
+              <button
+                onClick={() => setLimit((l) => l + PAGE)}
+                className="rounded-xl bg-white py-3 text-sm font-bold text-brand ring-1 ring-line hover:bg-brand-soft"
+              >
+                نمایش {toPersianDigits(Math.min(PAGE, out.ranked.length - limit))} ملک دیگر
+              </button>
+            )}
+
+            {out.rejected.length > 0 && (
+              <div className="rounded-2xl bg-white ring-1 ring-line">
+                <button onClick={() => setShowRejected((s) => !s)} className="flex w-full items-center justify-between px-4 py-3 text-sm">
+                  <span className="font-bold num">{toPersianDigits(out.rejected.length)} ملک حذف‌شده و دلیلش</span>
+                  <span className="text-muted">{showRejected ? "بستن" : "نمایش"}</span>
+                </button>
+                <div className="flex flex-wrap gap-2 px-4 pb-3">
+                  {Object.entries(out.rejectCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([k, n]) => (
+                      <span key={k} className="num rounded-full bg-gray-100 px-2.5 py-1 text-xs text-muted">
+                        {REJECT_LABEL[k]}: {toPersianDigits(n)}
+                      </span>
+                    ))}
+                </div>
+                {showRejected && (
+                  <ul className="divide-y divide-line border-t border-line text-sm">
+                    {out.rejected.slice(0, 60).map((r) => (
+                      <li key={r.cluster.clusterId} className="flex items-center justify-between gap-3 px-4 py-2">
+                        <button className="truncate text-start hover:text-brand" onClick={() => setInspectId(r.cluster.clusterId)}>
+                          {r.listing.title}
+                        </button>
+                        <span className="shrink-0 text-xs text-muted">{REJECT_LABEL[r.rejectReason ?? "cash"]}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div
+            className={`${
+              mobileMap ? "fixed inset-x-0 bottom-0 z-[1000] h-[70vh] rounded-t-3xl bg-white p-2 shadow-2xl" : "hidden"
+            } lg:sticky lg:top-[156px] lg:block lg:h-[calc(100vh-172px)] lg:p-0 lg:shadow-none`}
+          >
+            <MarketMap
+              data={data}
+              ranked={out.ranked}
+              hoverId={hoverId}
+              selectedId={selectedId}
+              onHover={setHoverId}
+              onSelect={selectFromMap}
+            />
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={() => setMobileMap((m) => !m)}
+        className="fixed bottom-4 left-1/2 z-[1001] -translate-x-1/2 rounded-full bg-ink px-5 py-3 text-sm font-bold text-white shadow-lg lg:hidden"
+      >
+        {mobileMap ? "بستن نقشه" : "نمایش روی نقشه"}
+      </button>
+
+      {inspected && <PipelineInspector result={inspected} data={data} intent={intent} onClose={() => setInspectId(null)} />}
+    </div>
+  );
+}

@@ -1,0 +1,119 @@
+# ترب اجاره — Torob for Tehran rentals
+
+> «کل بازار رهن و اجارهٔ تهران، مرتب‌شده با پول نقد شما»
+> Set how much cash you have **once**, and every listing in the market is re-priced and re-ranked for *your* money.
+
+Built for the Torob AI Product Engineer challenge ("Build Torob for X").
+
+## The problem
+
+Renting in Tehran is a two-variable price (رهن + اجاره) and almost every landlord lets you trade one for the other
+(the market convention: every ۱۰۰ میلیون extra deposit ≈ ۳ میلیون less rent per month). Today:
+
+1. **Filters lie.** Divar filters on the *posted* deposit/rent. A flat posted at «۸۰۰ میلیون + ۶۰ میلیون» is hidden from someone with
+   ۲ میلیارد cash and a ۲۵ میلیون rent cap — even though converting gives «۲ میلیارد + ۲۴ میلیون». Divar's
+   «برای تبدیل بکشید» slider exists, but only *inside one listing*, after you already found it.
+2. **The same flat is posted 3–5 times** by different agencies and the owner, at different prices.
+3. **No one tells you whether a price is fair** for the neighborhood, because two-variable prices are not comparable by eye.
+4. **The deal-breakers are hidden in free text** («فقط خانواده», «پارکینگ مشاع», «تخلیه ۱ ماهه», «بدون آسانسور»).
+
+## What ترب اجاره does
+
+| Torob idea | Rental version |
+|---|---|
+| One search over all shops | One cash bar over Divar + Sheypoor + Kilid posts |
+| Merge identical products | «همین ملک در ۳ آگهی» — agency duplicates merged into one card, cheapest offer surfaced |
+| Price chart / fair price | Neighborhood fair-price badge on *effective monthly cost per m²* |
+| Clean structured specs | Rules + optional LLM extract area, floor, year, convertibility, red flags from free text |
+
+- **Global cash bar (not a per-listing slider).** Every listing is solved for the deposit/rent split that is optimal for *your* cash,
+  rent cap and the return you can get on money elsewhere (`userRate`, default ۲.۵٪/month).
+  Listings that only fit **after** conversion are tagged «فقط با تبدیل ودیعه باز شد» — those are the ones Divar's filter hides.
+- **Fair price.** `effective = rent + deposit × 3%` → per m² → compared to the neighborhood median (computed over de-duplicated
+  properties). Green below −8٪, red above +8٪, with the p25–p75 band drawn.
+- **Natural language query** in Persian or Finglish: «۲ میلیارد نقد دارم، ماهی تا ۴۰ تومن، نزدیک مترو، پارکینگ لازمه» or
+  `3 milyard naghd, mahi 20 toman, tehranpars, parking`. Rules parse instantly; an LLM (if configured) refines in the background.
+- **Why #1?** Two deterministic bullets comparing #1 against #2 and #3 using only computed facts. The LLM may rephrase them, but
+  any rephrasing that changes a number is rejected.
+- **بازرس پایپ‌لاین داده** — for any card, see the raw post, what was normalized (and whether each field came from the form or the
+  description text), the duplicate cluster with text/photo evidence, and the score breakdown.
+- **Map** (Leaflet + OpenStreetMap, no keys): neighborhood medians, metro stations, numbered pins synced with the list.
+
+## Decisions
+
+- **Ranking runs in the browser.** ~150 listings × a pure function = 1–3 ms per slider move, so the slider is truly live and
+  the app works with zero backend cost. The LLM is never in the hot path.
+- **LLM is optional and fenced.** `/api/parse` (query → intent) and `/api/explain` (rephrase) fall back to rules/templates when
+  no key is set or the call times out. Offline extraction (`npm run data`) only accepts a red flag if the LLM quotes evidence that
+  literally appears in the post. Provider is chosen by env var: OpenAI, Gemini (OpenAI-compatible endpoint) or OpenRouter.
+- **Dedup is evidence-gated.** Candidates are blocked by neighborhood + rooms, vetoed on floor/rooms/area mismatch, scored on
+  structure + char-3-gram TF-IDF (boilerplate stripped) + photo dHash, and only merged if text *or* photos agree. Structural
+  similarity alone never merges (two identical 70 m² flats in the same tower are different flats).
+- **Paid boosts («نردبان», «فوری») are ignored** in ranking; trust comes from owner vs agency, real photos, and data completeness.
+- **Household rules are hard filters**: «فقط خانواده» never shows to a single person; rejected listings are listed with reasons.
+
+### Ranking formula
+
+```
+score = 0.35·cost + 0.20·fairness + 0.20·fit + 0.15·trust + 0.10·commute
+cost      = 0.3·(absolute monthly cost, normalized) + 0.7·(cost per m², normalized)
+fairness  = sigmoid(−Δ% / 10)          Δ% = vs neighborhood median per m²
+monthly   = rent + deposit × userRate  (at the optimal split for your cash)
+```
+
+Weights shift with the query («مهم‌ترین برام مترو», «مطمئن باشه», …).
+
+## Data — honest note
+
+`data/listings.json` is built from `data/seed-raw.json`: **157 raw posts** (103 Divar-style, 27 Sheypoor-style, 27 Kilid-style)
+across Punak, Sadeghiyeh, Saadat Abad, Tehranpars and Yousef Abad, priced at Aban 1405 levels. One post (`gaxPcvmg`) is a real
+Divar listing captured by hand; the rest are generated by `scripts/generate-seed.ts` (seeded, deterministic) with realistic
+agency templates, duplicates, conversion clauses and traps. Pipeline output: 4 noise posts dropped, 42 posts merged into 19
+duplicate groups → 111 unique properties; 25 listings are convertible *only* according to their description text.
+
+`scripts/ingest.ts` is a working Divar client (public `postlist` search + `posts-v2` detail, rate-limited, checkpointed,
+exponential backoff, optional dHash via `sharp`). Divar returned HTTP 502 to this machine's IP during development, so the demo ships
+with the seed dataset. Every seed card is marked «دادهٔ نمونه».
+
+```bash
+npm run ingest -- --pages 3   # → data/raw.json (if Divar is reachable)
+npm run data                  # normalize + dedup + stats → data/listings.json (add --no-llm to skip the LLM)
+```
+
+## What I deliberately left out
+
+- Real-time crawling and freshness tracking (the ingest script is batch-only).
+- Commute time by routing — only straight-line distance to the nearest metro station.
+- Accounts, saved searches and alerts («وقتی ملک ارزان‌تری آمد خبرم کن») — the obvious next feature.
+- Sheypoor/Kilid live clients; their posts are in the seed only.
+- Contacting the landlord; the card links to the source post.
+
+## Run locally
+
+```bash
+npm install
+cp .env.example .env.local   # optional: LLM_PROVIDER=openai|gemini|openrouter, LLM_API_KEY, LLM_MODEL
+npm run dev                  # http://localhost:3000
+npm test                     # 54 unit tests (money, conversion, ranking, intent, extraction, dedup, LLM guards)
+npm run build
+```
+
+## Deploy (Vercel)
+
+No config is needed: the dataset is committed and there are no paid keys. Import the repo in Vercel (or run `npx vercel`), and
+optionally add `LLM_PROVIDER`, `LLM_API_KEY` and `LLM_MODEL` as environment variables. Without them the app runs fully on rules.
+
+## 5-minute demo script
+
+1. **(0:00) The hook.** Open the app at the default «۲ میلیارد نقد / ماهی ۴۰». Point at the summary: «۱۲ تا فقط با تبدیل ودیعه باز شدند
+   (فیلتر دیوار نشانشان نمی‌داد)». Open one: posted at a low deposit + high rent, here shown as «با پول شما: رهن ۲ میلیارد + اجاره …».
+2. **(0:45) One slider, whole market.** Drag the cash bar from ۲ میلیارد to ۸۰۰ میلیون and back. The list and map re-rank instantly
+   (timing shown in ms). Contrast with Divar: there you'd drag a slider inside each listing one by one.
+3. **(1:30) Duplicates.** Find a card with «همین ملک در ۳ آگهی» → open the inspector → «ادغام تکراری‌ها»: same flat from two agencies and the
+   owner, text and photo evidence, and the owner's post is ۵ میلیون/month cheaper.
+4. **(2:15) Fair price.** Show a green «۳۲٪ زیر میانگین تهرانپارس» vs a red badge; the strip shows where it sits in the p25–p75 band.
+5. **(2:45) Talk to it.** Click «مجردم، ۱ میلیارد پول دارم ماهی ۳۰ میلیون، پونک یا صادقیه». Chips show what was understood; «فقط خانواده»
+   listings move to the rejected section with the reason. Try the Finglish example.
+6. **(3:30) Why #1.** Read the two bullets on the top card (cheaper by X with *your* cash, one fewer red flag, real photos…).
+7. **(4:00) Under the hood.** Inspector → «خام» vs «نرمال‌شده»: area/floor/convertibility pulled from free text, each field labeled
+   form vs text. Close with: everything ranks client-side; the LLM only parses and rephrases, and the app works without it.
