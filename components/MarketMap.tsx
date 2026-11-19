@@ -10,19 +10,29 @@ import { fmtToman } from "@/lib/money";
 import { toPersianDigits } from "@/lib/persian";
 import type { RankedResult } from "@/lib/types";
 
-const COLOR = { good: "#0f9d58", fair: "#6b7280", high: "#d93025" } as const;
+const PILL = {
+  good: "background:#ecfdf5;color:#059669;border:1px solid #059669;box-shadow:0 6px 16px -8px rgba(5,150,105,.7);",
+  fair: "background:#ffffff;color:#1e293b;border:1px solid #e5e7eb;box-shadow:0 8px 18px -10px rgba(15,23,42,.55);",
+  high: "background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;box-shadow:0 6px 16px -8px rgba(225,29,72,.45);",
+} as const;
 
-function rankIcon(rank: number, color: string, active: boolean) {
-  const size = active ? 34 : 28;
+function shortMonthly(v: number): string {
+  const millions = v / 1e6;
+  const rounded = millions >= 100 ? Math.round(millions) : Math.round(millions * 10) / 10;
+  return `${toPersianDigits(String(rounded)).replace(".", "٫")} م`;
+}
+
+function priceIcon(label: string, band: keyof typeof PILL, active: boolean) {
+  const width = Math.max(58, label.length * 12 + 20);
+  const height = 30;
+  const look = active
+    ? "background:#f31d3a;color:#fff;border:1px solid #f31d3a;box-shadow:0 10px 22px -8px rgba(243,29,58,.85);transform:scale(1.1);"
+    : PILL[band];
   return L.divIcon({
     className: "",
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-    html: `<div style="width:${size}px;height:${size}px;border-radius:999px;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font:900 ${
-      active ? 14 : 12
-    }px Vazirmatn;font-variant-numeric:tabular-nums;font-feature-settings:'tnum';border:3px solid #fff;box-shadow:${
-      active ? "0 0 0 3px #f31d3a, 0 2px 6px rgba(0,0,0,.35)" : "0 2px 6px rgba(0,0,0,.35)"
-    }">${toPersianDigits(rank)}</div>`,
+    iconSize: [width, height],
+    iconAnchor: [width / 2, height / 2],
+    html: `<div style="width:${width}px;height:${height}px;border-radius:999px;display:flex;align-items:center;justify-content:center;font:800 12px Vazirmatn;font-variant-numeric:tabular-nums;font-feature-settings:'tnum';${look}">${label}</div>`,
   });
 }
 
@@ -113,37 +123,18 @@ export default function MarketMap({
           </CircleMarker>
         ))}
 
-        {ranked.slice(10).reverse().map((r) => {
-          const id = r.cluster.clusterId;
-          const color = COLOR[fairBand(r.fairDeltaPct)];
-          const active = id === activeId;
-          return (
-            <CircleMarker
-              key={`${id}-${active ? "on" : "off"}`}
-              center={[r.listing.geo.lat, r.listing.geo.lng]}
-              radius={active ? 10 : 6}
-              pathOptions={{ color: active ? "#f31d3a" : "#fff", weight: active ? 3 : 2, fillColor: active ? "#f31d3a" : color, fillOpacity: 1 }}
-              eventHandlers={{ mouseover: () => onHover(id), mouseout: () => onHover(null), click: () => onSelect(id) }}
-            >
-              <Tooltip className="price-tip">
-                <span className="num">
-                  {toPersianDigits(r.listing.areaM2)} متر | {fmtToman(r.effectiveMonthly, { unit: false })} در ماه
-                </span>
-              </Tooltip>
-            </CircleMarker>
-          );
-        })}
-
-        {ranked.slice(0, 10).reverse().map((r) => {
+        {[...ranked].reverse().map((r) => {
           const rank = ranked.indexOf(r) + 1;
           const id = r.cluster.clusterId;
           const active = id === activeId;
+          const band = fairBand(r.fairDeltaPct);
+          const label = shortMonthly(r.effectiveMonthly);
           return (
             <Marker
-              key={`${id}-${active ? "on" : "off"}`}
+              key={`${id}-${active ? "on" : "off"}-${label}`}
               position={[r.listing.geo.lat, r.listing.geo.lng]}
-              icon={rankIcon(rank, active || rank === 1 ? "#f31d3a" : COLOR[fairBand(r.fairDeltaPct)], active)}
-              zIndexOffset={active ? 1000 : 500 - rank}
+              icon={priceIcon(label, band, active)}
+              zIndexOffset={active ? 1000 : 400 - Math.min(rank, 80)}
               eventHandlers={{ mouseover: () => onHover(id), mouseout: () => onHover(null), click: () => onSelect(id) }}
             >
               <Tooltip className="price-tip" direction="top" offset={[0, -12]}>
@@ -159,9 +150,9 @@ export default function MarketMap({
       <div className="pointer-events-none absolute bottom-3 right-3 z-[500] rounded-xl border border-line bg-white px-3 py-2 text-[11px]">
         <div className="mb-1 font-bold">نسبت به میانگین محله</div>
         <div className="flex items-center gap-3">
-          <Legend color={COLOR.good} label="زیر میانگین" />
-          <Legend color={COLOR.fair} label="منصفانه" />
-          <Legend color={COLOR.high} label="گران" />
+          <Legend color="#059669" label="زیر میانگین" />
+          <Legend color="#1e293b" label="منصفانه" />
+          <Legend color="#e11d48" label="گران" />
         </div>
         <div className="mt-1 text-muted">محدودهٔ تقریبی ملک روی نقشه</div>
       </div>

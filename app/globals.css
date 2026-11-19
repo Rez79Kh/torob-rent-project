@@ -53,8 +53,8 @@ input[type="range"].cash-range {
   border-radius: 999px;
   background: linear-gradient(
     to left,
-    var(--color-brand) 0%,
-    var(--color-brand) var(--fill, 50%),
+    #9f1239 0%,
+    #f31d3a var(--fill, 50%),
     #e5e7eb var(--fill, 50%),
     #e5e7eb 100%
   );
@@ -104,4 +104,29 @@ input[type="range"].cash-range::-moz-range-thumb {
 .scroll-thin::-webkit-scrollbar-thumb {
   background: #d1d5db;
   border-radius: 999px;
+}
+
+.command-dock {
+  background: rgb(255 255 255 / 0.92);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px -2px rgb(15 23 42 / 0.05);
+}
+
+.hide-scroll {
+  scrollbar-width: none;
+}
+.hide-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.leaflet-div-icon {
+  background: transparent;
+  border: none;
+}
+
+@media (min-width: 1024px) {
+  .map-pane {
+    top: calc(var(--dock) + 12px);
+    height: calc(100vh - var(--dock) - 24px);
+  }
 }

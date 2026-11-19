@@ -92,6 +92,8 @@ export default function SearchShell({ data, llmEnabled }: { data: ClientData; ll
   );
 
   const listRef = useRef<HTMLDivElement>(null);
+  const dockRef = useRef<HTMLDivElement>(null);
+  const [dockH, setDockH] = useState(230);
   const pendingScroll = useRef<string | null>(null);
   const selectFromMap = useCallback((clusterId: string) => {
     pendingScroll.current = clusterId;
@@ -101,6 +103,16 @@ export default function SearchShell({ data, llmEnabled }: { data: ClientData; ll
       return index < 0 ? current : Math.max(current, index + 1);
     });
   }, [out.ranked]);
+
+  useEffect(() => {
+    const el = dockRef.current;
+    if (!el) return;
+    const measure = () => setDockH(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     const clusterId = pendingScroll.current;
@@ -116,53 +128,41 @@ export default function SearchShell({ data, llmEnabled }: { data: ClientData; ll
 
   return (
     <div className="min-h-screen">
-      <div className="sticky top-0 z-[1100]">
-      <header className="border-b border-line bg-white">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <img src="/torob-logo.png" alt="ترب اجاره" width={34} height={34} />
-            <div>
-              <h1 className="text-lg font-black leading-tight">
+      <div ref={dockRef} className="command-dock sticky top-0 z-[1100] border-b border-white/70">
+        <div className="mx-auto max-w-[1440px] px-4 py-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <img src="/torob-logo.png" alt="ترب اجاره" width={34} height={34} />
+              <h1 className="text-lg font-black leading-none">
                 ترب <span className="text-brand">اجاره</span>
               </h1>
-              <p className="text-xs text-muted">کل بازار رهن و اجارهٔ تهران، مرتب‌شده با پول نقد شما</p>
             </div>
-          </div>
-          <div className="hidden items-center gap-4 text-xs text-muted md:flex">
-            <span className="num">
-              {toPersianDigits(data.stats.rawCount)} آگهی خام در بازار تهران
+            <span className="num rounded-full border border-line bg-white px-3 py-1 text-[11px] font-bold text-slate-600 shadow-sm">
+              {toPersianDigits(data.clusters.length)} ملک یکتا از {toPersianDigits(data.stats.rawCount)} آگهی
             </span>
-            <span className="h-4 w-px bg-line" />
-            <span className="num">{toPersianDigits(data.clusters.length)} ملک یکتا</span>
+          </div>
+          <div className="mt-2">
+            <IntentInput intent={intent} parsing={parsing} llmEnabled={llmEnabled} onQuery={onQuery} onChange={setIntent} />
+          </div>
+          <div className="mt-2">
+            <CashBar intent={intent} onChange={(i) => setIntent(i)} />
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+            <span className="num font-bold text-ink">{toPersianDigits(out.ranked.length)} ملک مناسب شما</span>
+            {out.unlockedCount > 0 && <span className="num text-emerald-600">{toPersianDigits(out.unlockedCount)} تا با تبدیل نقدینگی شما باز شد</span>}
+            <span className="num">{toPersianDigits(totalListings - data.clusters.length)} آگهی تکراری ادغام شد</span>
+            {mounted && (
+              <span className="num ms-auto" title="زمان رتبه‌بندی کل بازار در مرورگر">
+                رتبه‌بندی {toPersianDigits(Math.max(out.ms, 0.1).toFixed(1))} میلی‌ثانیه
+              </span>
+            )}
           </div>
         </div>
-      </header>
-
-      <CashBar intent={intent} onChange={(i) => setIntent(i)} />
       </div>
 
-      <div className="mx-auto max-w-[1400px] px-4">
-        <IntentInput intent={intent} parsing={parsing} llmEnabled={llmEnabled} onQuery={onQuery} onChange={setIntent} />
-
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-line bg-white px-4 py-2.5 text-sm">
-          <span className="font-bold num">{toPersianDigits(out.ranked.length)} ملک مناسب شما</span>
-          {out.unlockedCount > 0 && (
-            <span className="num text-good">
-              | {toPersianDigits(out.unlockedCount)} تا با تبدیل نقدینگی شما باز شد
-            </span>
-          )}
-          <span className="num text-muted">
-            | {toPersianDigits(totalListings - data.clusters.length)} آگهی تکراری ادغام شد | {toPersianDigits(data.stats.droppedNoise)} آگهی بی‌کیفیت حذف شد
-          </span>
-          {mounted && (
-            <span className="num ms-auto text-[11px] text-muted" title="زمان رتبه‌بندی کل بازار در مرورگر">
-              رتبه‌بندی کل بازار در {toPersianDigits(Math.max(out.ms, 0.1).toFixed(1))} میلی‌ثانیه
-            </span>
-          )}
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-4 pb-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
-          <div ref={listRef} className="flex flex-col gap-3">
+      <div className="mx-auto max-w-[1440px] px-4">
+        <div className="mt-4 grid grid-cols-1 gap-4 pb-16 lg:grid-cols-12">
+          <div ref={listRef} className="flex flex-col gap-3 lg:col-span-7">
             {out.ranked.length === 0 && (
               <div className="rounded-2xl border border-line bg-white p-8 text-center">
                 <p className="text-lg font-bold">با این پول و سقف اجاره چیزی پیدا نشد</p>
@@ -227,9 +227,10 @@ export default function SearchShell({ data, llmEnabled }: { data: ClientData; ll
           </div>
 
           <div
-            className={`${
+            className={`map-pane ${
               mobileMap ? "fixed inset-x-0 bottom-0 z-[1000] h-[70vh] rounded-t-3xl bg-white p-2 shadow-2xl" : "hidden"
-            } lg:sticky lg:top-[168px] lg:block lg:h-[calc(100vh-184px)] lg:p-0 lg:shadow-none`}
+            } lg:sticky lg:col-span-5 lg:block lg:p-0 lg:shadow-none`}
+            style={{ ["--dock" as string]: `${dockH}px` }}
           >
             <MarketMap
               data={data}

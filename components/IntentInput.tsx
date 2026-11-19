@@ -40,6 +40,7 @@ export default function IntentInput({
   const [q, setQ] = useState("");
   const [req, setReq] = useState<{ id: number; at: number } | null>(null);
   const [pulse, setPulse] = useState(false);
+  const [more, setMore] = useState(false);
   const loading = req !== null || parsing;
 
   useEffect(() => {
@@ -77,24 +78,24 @@ export default function IntentInput({
   };
 
   return (
-    <section className="mt-4">
+    <section>
       <form
         onSubmit={(e) => {
           e.preventDefault();
           if (!loading) ask(q);
         }}
-        className="flex items-stretch gap-2 rounded-2xl border border-line bg-white p-2 focus-within:border-brand focus-within:shadow-[0_0_0_1px_var(--color-brand)]"
+        className="flex items-stretch gap-2 rounded-2xl border border-line bg-white p-1.5 shadow-[0_8px_24px_-18px_rgba(15,23,42,0.45)] focus-within:border-brand"
       >
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="به زبان خودتان بنویسید: «۲ میلیارد نقد دارم، ماهی تا ۴۰ تومن، نزدیک مترو، پارکینگ لازمه»"
-          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-[15px] outline-none placeholder:text-gray-400"
+          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-slate-400"
           aria-label="جستجوی هوشمند"
         />
         <button
           type="submit"
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-brand px-5 text-sm font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-brand px-4 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={loading}
           aria-busy={loading}
         >
@@ -109,82 +110,92 @@ export default function IntentInput({
         </button>
       </form>
 
-      <div className="mt-2 flex flex-wrap gap-1.5">
+      <div className="hide-scroll mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+        {intent.rawQuery && (
+          <>
+            <Chip pulse={pulse}>پول نقد {fmtToman(intent.cash, { unit: false })}</Chip>
+            <Chip pulse={pulse}>اجاره تا {fmtToman(intent.maxRent, { unit: false })}</Chip>
+            {intent.minArea && <Chip pulse={pulse}>حداقل {toPersianDigits(intent.minArea)} متر</Chip>}
+            {intent.minRooms && <Chip pulse={pulse}>{toPersianDigits(intent.minRooms)} خواب+</Chip>}
+            {intent.maxBuildAge && <Chip pulse={pulse}>زیر {toPersianDigits(intent.maxBuildAge)} سال ساخت</Chip>}
+            {intent.household && <Chip pulse={pulse}>{HOUSEHOLD_FA[intent.household]}</Chip>}
+          </>
+        )}
         {EXAMPLES.map((ex) => (
           <button
             key={ex}
+            type="button"
             onClick={() => {
               setQ(ex);
               ask(ex);
             }}
-            className="rounded-full border border-line bg-white px-3 py-1 text-xs text-muted hover:border-brand hover:text-brand"
+            className="max-w-[14rem] shrink-0 truncate rounded-full border border-line bg-white px-3 py-1 text-[11px] text-muted hover:border-brand hover:text-brand"
           >
             {ex}
           </button>
         ))}
-      </div>
-
-      {intent.rawQuery && (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-muted">برداشت ما از جملهٔ شما{intent.parsedBy === "llm" ? " (هوش مصنوعی)" : intent.parsedBy === "rules" ? " (پردازشگر فارسی)" : ""}:</span>
-          <Chip pulse={pulse}>پول نقد {fmtToman(intent.cash, { unit: false })}</Chip>
-          <Chip pulse={pulse}>اجاره تا {fmtToman(intent.maxRent, { unit: false })}</Chip>
-          {intent.minArea && <Chip pulse={pulse}>حداقل {toPersianDigits(intent.minArea)} متر</Chip>}
-          {intent.minRooms && <Chip pulse={pulse}>{toPersianDigits(intent.minRooms)} خواب+</Chip>}
-          {intent.maxBuildAge && <Chip pulse={pulse}>زیر {toPersianDigits(intent.maxBuildAge)} سال ساخت</Chip>}
-          {intent.household && <Chip pulse={pulse}>{HOUSEHOLD_FA[intent.household]}</Chip>}
-          {!llmEnabled && <span className="text-[11px] text-gray-400">بدون کلید API هم کار می‌کند</span>}
-        </div>
-      )}
-
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
-        <span className="me-1 text-muted">محله:</span>
         {NEIGHBORHOODS.map((n) => {
           const on = intent.neighborhoods.includes(n.slug);
           return (
             <button
               key={n.slug}
+              type="button"
               onClick={() => toggleHood(n.slug)}
-              className={`rounded-full border px-3 py-1 ${on ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink"}`}
+              className={`shrink-0 rounded-full border px-3 py-1 text-xs ${on ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-slate-400"}`}
             >
               {n.fa}
             </button>
           );
         })}
-        <span className="mx-2 h-4 w-px bg-line" />
-        <span className="me-1 text-muted">امکانات:</span>
-        {(Object.keys(MUST_FA) as MustKey[]).map((k) => {
-          const must = intent.must.includes(k);
-          const nice = intent.nice.includes(k);
-          return (
-            <button
-              key={k}
-              onClick={() => cycleMust(k)}
-              title="یک کلیک: ضروری | دو کلیک: ترجیحی | سه کلیک: مهم نیست"
-              className={`rounded-full border px-3 py-1 ${
-                must ? "border-brand bg-brand text-white" : nice ? "border-brand/40 bg-brand-soft text-brand" : "border-line bg-white text-ink hover:border-ink"
-              }`}
-            >
-              {MUST_FA[k]}
-              {must ? " | ضروری" : nice ? " | ترجیحی" : ""}
-            </button>
-          );
-        })}
-        <span className="mx-2 h-4 w-px bg-line" />
-        {(["single", "couple", "family"] as Household[]).map((h) => (
-          <button
-            key={h}
-            onClick={() => onChange({ ...intent, household: intent.household === h ? undefined : h })}
-            className={`rounded-full border px-3 py-1 ${intent.household === h ? "border-ink bg-ink text-white" : "border-line bg-white hover:border-ink"}`}
-          >
-            {HOUSEHOLD_FA[h]}
-          </button>
-        ))}
+        <button
+          type="button"
+          onClick={() => setMore((open) => !open)}
+          className="shrink-0 rounded-full border border-dashed border-slate-300 bg-white px-3 py-1 text-xs font-bold text-slate-500 hover:border-brand hover:text-brand"
+          aria-expanded={more}
+        >
+          {more ? "بستن فیلترها" : "+ فیلترهای بیشتر"}
+        </button>
       </div>
+
+      {more && (
+        <div className="mt-2">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            {(Object.keys(MUST_FA) as MustKey[]).map((k) => {
+              const must = intent.must.includes(k);
+              const nice = intent.nice.includes(k);
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => cycleMust(k)}
+                  title="یک کلیک: ضروری | دو کلیک: ترجیحی | سه کلیک: مهم نیست"
+                  className={`rounded-full border px-3 py-1 ${
+                    must ? "border-brand bg-brand text-white" : nice ? "border-brand/40 bg-brand-soft text-brand" : "border-line bg-white text-ink hover:border-ink"
+                  }`}
+                >
+                  {MUST_FA[k]}
+                  {must ? " | ضروری" : nice ? " | ترجیحی" : ""}
+                </button>
+              );
+            })}
+            {(["single", "couple", "family"] as Household[]).map((h) => (
+              <button
+                key={h}
+                type="button"
+                onClick={() => onChange({ ...intent, household: intent.household === h ? undefined : h })}
+                className={`rounded-full border px-3 py-1 ${intent.household === h ? "border-ink bg-ink text-white" : "border-line bg-white hover:border-ink"}`}
+              >
+                {HOUSEHOLD_FA[h]}
+              </button>
+            ))}
+            {!llmEnabled && <span className="text-[11px] text-slate-400">بدون کلید API هم کار می‌کند</span>}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
 
 function Chip({ children, pulse }: { children: React.ReactNode; pulse?: boolean }) {
-  return <span className={`num rounded-full bg-brand-soft px-2.5 py-1 font-medium text-brand ${pulse ? "chip-pulse" : ""}`}>{children}</span>;
+  return <span className={`num shrink-0 rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand ${pulse ? "chip-pulse" : ""}`}>{children}</span>;
 }

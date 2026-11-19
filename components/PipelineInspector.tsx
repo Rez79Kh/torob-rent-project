@@ -27,6 +27,30 @@ const WEIGHT_FA: Record<keyof Weights, string> = {
   commute: "دسترسی به مترو",
 };
 
+const SCORE_TONE: Record<keyof Weights, string> = {
+  cost: "bg-[#f31d3a]",
+  fairness: "bg-emerald-500",
+  fit: "bg-sky-500",
+  trust: "bg-amber-500",
+  commute: "bg-indigo-500",
+};
+
+function Meter({ label, value, mark, tone }: { label: string; value: number; mark?: number; tone: string }) {
+  const pct = Math.max(0, Math.min(100, value * 100));
+  return (
+    <div className="mt-1">
+      <div className="num mb-0.5 flex justify-between text-[10px] text-muted">
+        <span>{label}</span>
+        <span>{toPersianDigits(Math.round(pct))}٪</span>
+      </div>
+      <div className="relative h-1.5 rounded-full bg-slate-100">
+        <div className={`h-1.5 rounded-full ${tone}`} style={{ width: `${pct}%` }} />
+        {mark != null && <span className="absolute top-[-2px] h-2.5 w-px bg-slate-700" style={{ left: `${mark * 100}%` }} title="آستانهٔ ۰٫۶۸" />}
+      </div>
+    </div>
+  );
+}
+
 export default function PipelineInspector({
   result,
   data,
@@ -63,9 +87,9 @@ export default function PipelineInspector({
 
   return (
     <div className="fixed inset-0 z-[2000] flex" role="dialog" aria-modal="true" aria-label="بازرس پایپ‌لاین داده">
-      <div className="flex-1 bg-black/30" onClick={onClose} />
-      <aside className="flex h-full w-full max-w-[640px] flex-col bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-line px-5 py-3">
+      <div className="flex-1 bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose} />
+      <aside className="flex h-full w-full max-w-[680px] flex-col rounded-s-3xl bg-white shadow-[0_24px_80px_-24px_rgba(15,23,42,0.45)]">
+        <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <div>
             <div className="text-xs font-bold text-brand">بازرس پایپ‌لاین داده</div>
             <div className="num text-sm font-black">
@@ -294,13 +318,9 @@ function ClusterTab({
                 </td>
                 <td className="num py-2 font-bold">{fmtToman(cost, { unit: false })}</td>
                 <td className="num py-2">
-                  <div className="font-bold">{toPersianDigits(Math.round(m.similarity * 100))}٪</div>
-                  {m.evidence && (
-                    <div className="text-[10px] text-muted">
-                      متن {toPersianDigits(Math.round(m.evidence.textCosine * 100))}٪
-                      {m.evidence.imageOverlap != null && ` | عکس ${toPersianDigits(Math.round(m.evidence.imageOverlap * 100))}٪`}
-                    </div>
-                  )}
+                  <Meter label="امتیاز ادغام" value={m.similarity} mark={0.68} tone="bg-brand" />
+                  {m.evidence && <Meter label="شباهت متن" value={m.evidence.textCosine} tone="bg-sky-500" />}
+                  {m.evidence?.imageOverlap != null && <Meter label="تطابق عکس" value={m.evidence.imageOverlap} tone="bg-emerald-500" />}
                   <div className="text-[10px] text-muted">{m.matchedOn.join("، ")}</div>
                 </td>
               </tr>
@@ -335,8 +355,8 @@ function ScoreTab({ result, intent }: { result: RankedResult; intent: UserIntent
                 نمره {toPersianDigits(Math.round(v * 100))} × وزن {toPersianDigits(Math.round((w[k] / sum) * 100))}٪
               </span>
             </div>
-            <div className="h-2 rounded-full bg-gray-100">
-              <div className="h-2 rounded-full bg-brand" style={{ width: `${v * 100}%` }} />
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className={`h-2 rounded-full ${SCORE_TONE[k]}`} style={{ width: `${v * 100}%` }} />
             </div>
           </div>
         );
