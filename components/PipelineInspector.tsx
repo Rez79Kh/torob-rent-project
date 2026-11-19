@@ -86,12 +86,12 @@ export default function PipelineInspector({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[2000] flex" role="dialog" aria-modal="true" aria-label="بازرس پایپ‌لاین داده">
+    <div className="fixed inset-0 z-[2000] flex" role="dialog" aria-modal="true" aria-label="آنالیز هوشمند آگهی">
       <div className="flex-1 bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose} />
       <aside className="flex h-full w-full max-w-[680px] flex-col rounded-s-3xl bg-white shadow-[0_24px_80px_-24px_rgba(15,23,42,0.45)]">
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <div>
-            <div className="text-xs font-bold text-brand">بازرس پایپ‌لاین داده</div>
+            <div className="text-xs font-bold text-brand">آنالیز هوشمند آگهی</div>
             <div className="num text-sm font-black">
               {toPersianDigits(listing.areaM2)} متر | {NEIGHBORHOOD_BY_SLUG[listing.neighborhood]?.fa} | {toPersianDigits(result.cluster.memberIds.length)} آگهی
             </div>

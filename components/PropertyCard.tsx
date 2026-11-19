@@ -206,12 +206,26 @@ function PropertyCard({
         </div>
       )}
 
-      <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
-        <button onClick={() => onInspect(id)} className="text-xs font-bold text-ink hover:text-brand">
-          بازرس پایپ‌لاین داده
-        </button>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onInspect(id)}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-[#f31d3a]/40 hover:bg-rose-50 hover:text-[#f31d3a]"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+              <path d="M8 1.1 9.05 4.7 12.7 5.75 9.05 6.8 8 10.4 6.95 6.8 3.3 5.75 6.95 4.7 8 1.1ZM12.35 9.15l.5 1.7 1.7.5-1.7.5-.5 1.7-.5-1.7-1.7-.5 1.7-.5.5-1.7Z" />
+            </svg>
+            آنالیز هوشمند آگهی
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+              <path d="M10 3.5 5.5 8 10 12.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <span title="امتیاز نهایی با وزن‌های فعلی شما" className="num inline-flex items-center rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-600">
+            امتیاز {toPersianDigits(Math.round(r.score * 100))}
+          </span>
+        </div>
         <div className="num flex items-center gap-3 text-[11px] text-muted">
-          <span title="امتیاز نهایی با وزن‌های فعلی شما">امتیاز {toPersianDigits(Math.round(r.score * 100))}</span>
           {l.url && (
             <a href={l.url} target="_blank" rel="noreferrer" className="font-bold text-brand hover:underline">
               مشاهده در {SOURCE_FA[l.source]}

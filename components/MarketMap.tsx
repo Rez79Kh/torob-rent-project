@@ -11,9 +11,9 @@ import { toPersianDigits } from "@/lib/persian";
 import type { RankedResult } from "@/lib/types";
 
 const PILL = {
-  good: "background:#ecfdf5;color:#059669;border:1px solid #059669;box-shadow:0 6px 16px -8px rgba(5,150,105,.7);",
-  fair: "background:#ffffff;color:#1e293b;border:1px solid #e5e7eb;box-shadow:0 8px 18px -10px rgba(15,23,42,.55);",
-  high: "background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;box-shadow:0 6px 16px -8px rgba(225,29,72,.45);",
+  good: "background:#ecfdf5;color:#059669;border:1px solid #059669;",
+  fair: "background:#ffffff;color:#1e293b;border:1px solid #e5e7eb;",
+  high: "background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;",
 } as const;
 
 function shortMonthly(v: number): string {
@@ -23,16 +23,16 @@ function shortMonthly(v: number): string {
 }
 
 function priceIcon(label: string, band: keyof typeof PILL, active: boolean) {
-  const width = Math.max(58, label.length * 12 + 20);
-  const height = 30;
+  const width = Math.max(48, label.length * 8 + 16);
+  const height = 22;
   const look = active
-    ? "background:#f31d3a;color:#fff;border:1px solid #f31d3a;box-shadow:0 10px 22px -8px rgba(243,29,58,.85);transform:scale(1.1);"
+    ? "background:#f31d3a;color:#fff;border:1px solid #f31d3a;box-shadow:0 8px 16px -6px rgba(243,29,58,.75);transform:scale(1.1);"
     : PILL[band];
   return L.divIcon({
-    className: "",
+    className: active ? "hover:!z-[1000] !z-[1000]" : "hover:!z-[1000]",
     iconSize: [width, height],
     iconAnchor: [width / 2, height / 2],
-    html: `<div style="width:${width}px;height:${height}px;border-radius:999px;display:flex;align-items:center;justify-content:center;font:800 12px Vazirmatn;font-variant-numeric:tabular-nums;font-feature-settings:'tnum';${look}">${label}</div>`,
+    html: `<div class="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-bold shadow-sm" style="font-family:Vazirmatn,sans-serif;font-variant-numeric:tabular-nums;font-feature-settings:'tnum';${look}">${label}</div>`,
   });
 }
 

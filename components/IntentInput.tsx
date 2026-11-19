@@ -110,7 +110,7 @@ export default function IntentInput({
         </button>
       </form>
 
-      <div className="hide-scroll mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         {intent.rawQuery && (
           <>
             <Chip pulse={pulse}>پول نقد {fmtToman(intent.cash, { unit: false })}</Chip>
@@ -129,7 +129,7 @@ export default function IntentInput({
               setQ(ex);
               ask(ex);
             }}
-            className="max-w-[14rem] shrink-0 truncate rounded-full border border-line bg-white px-3 py-1 text-[11px] text-muted hover:border-brand hover:text-brand"
+            className="rounded-full border border-line bg-white px-3 py-1 text-[11px] text-muted hover:border-brand hover:text-brand"
           >
             {ex}
           </button>
@@ -141,7 +141,7 @@ export default function IntentInput({
               key={n.slug}
               type="button"
               onClick={() => toggleHood(n.slug)}
-              className={`shrink-0 rounded-full border px-3 py-1 text-xs ${on ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-slate-400"}`}
+              className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs ${on ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-slate-400"}`}
             >
               {n.fa}
             </button>
@@ -150,7 +150,7 @@ export default function IntentInput({
         <button
           type="button"
           onClick={() => setMore((open) => !open)}
-          className="shrink-0 rounded-full border border-dashed border-slate-300 bg-white px-3 py-1 text-xs font-bold text-slate-500 hover:border-brand hover:text-brand"
+          className="rounded-full border border-dashed border-slate-300 bg-white px-3 py-1 text-xs font-bold text-slate-500 hover:border-brand hover:text-brand"
           aria-expanded={more}
         >
           {more ? "بستن فیلترها" : "+ فیلترهای بیشتر"}
