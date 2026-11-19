@@ -2,7 +2,7 @@
 
 📄 [نسخه فارسی مستندات پروژه](./README_FA.md)
 
-🔗 Live Demo: [Add Vercel URL after deploy]
+🔗 Live Demo: https://torob-rent-project.vercel.app/
 
 ترب اجاره applies Torob's comparison engine to Tehran rentals: **one canonical property, many agency offers.**
 

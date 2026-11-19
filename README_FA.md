@@ -4,7 +4,7 @@
 
 <span dir="ltr">[English Documentation](./README.md)</span>
 
-🔗 دموی زنده: [بعد از استقرار، نشانی Vercel را اینجا بگذارید]
+🔗 دموی زنده: https://torob-rent-project.vercel.app/
 
 ترب اجاره موتور مقایسهٔ ترب را روی رهن و اجارهٔ تهران پیاده می‌کند: **یک ملک canonical، چند پیشنهاد آژانس.**
 
