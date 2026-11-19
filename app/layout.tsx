@@ -10,12 +10,15 @@ export const metadata: Metadata = {
   title: "ترب اجاره | مقایسهٔ رهن و اجارهٔ تهران با پول نقد شما",
   description:
     "یک بار بگویید چقدر پول نقد دارید؛ ترب اجاره کل بازار رهن و اجارهٔ تهران را با تبدیل ودیعه، قیمت منصفانهٔ محله و ادغام آگهی‌های تکراری رتبه‌بندی می‌کند.",
+  icons: {
+    icon: "/torob-logo.png",
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#d6283b",
+  themeColor: "#f31d3a",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -22,7 +22,7 @@ export default function CashBar({ intent, onChange }: { intent: UserIntent; onCh
   const rentPct = (Math.min(intent.maxRent, RENT_MAX) / RENT_MAX) * 100;
 
   return (
-    <div className="sticky top-0 z-[1100] border-b border-line bg-white/95 backdrop-blur">
+    <div className="border-b border-line bg-white/95 backdrop-blur">
       <div className="mx-auto grid max-w-[1400px] grid-cols-2 gap-x-4 gap-y-2 px-4 py-2.5 md:gap-x-8 md:py-3 md:grid-cols-[1.3fr_1fr_auto]">
         <label className="block">
           <div className="mb-1.5 flex flex-col items-start md:flex-row md:items-baseline md:justify-between">
@@ -75,13 +75,13 @@ export default function CashBar({ intent, onChange }: { intent: UserIntent; onCh
         <div className="relative col-span-2 flex items-center md:col-span-1">
           <button
             onClick={() => setAdvanced((a) => !a)}
-            className="rounded-lg px-3 py-1.5 text-xs text-muted md:py-2 ring-1 ring-line hover:bg-gray-50"
+            className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:bg-gray-50 md:py-2"
             aria-expanded={advanced}
           >
             نرخ تبدیل و ارزش پول
           </button>
           {advanced && (
-            <div className="absolute end-0 top-full z-10 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-xl bg-white p-4 text-sm shadow-xl ring-1 ring-line">
+            <div className="absolute end-0 top-full z-10 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-line bg-white p-4 text-sm shadow-lg">
               <p className="mb-3 leading-7 text-muted">
                 صاحب‌خانه‌ها معمولاً هر <b className="text-ink">۱۰۰ میلیون</b> رهن بیشتر را با <b className="text-ink">۳ میلیون</b> اجارهٔ کمتر عوض
                 می‌کنند (۳٪ در ماه). اگر پول شما جای دیگری کمتر از این سود می‌دهد، گذاشتن پول بیشتر در رهن به‌صرفه است.

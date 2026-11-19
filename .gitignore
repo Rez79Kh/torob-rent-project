@@ -9,3 +9,7 @@ next-env.d.ts
 data/raw.json
 data/.ingest-checkpoint.json
 .DS_Store
+LOCAL_STUDY_GUIDE_FA.md
+LOCAL_STUDY_GUIDE_EN.md
+VIDEO_SCRIPT_GUIDE_FA.md
+VIDEO_SCRIPT_GUIDE_EN.md

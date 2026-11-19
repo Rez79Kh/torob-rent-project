@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NEIGHBORHOODS } from "@/lib/geo";
 import { fmtToman } from "@/lib/money";
 import { toPersianDigits } from "@/lib/persian";
@@ -38,6 +38,31 @@ export default function IntentInput({
   onChange: (i: UserIntent) => void;
 }) {
   const [q, setQ] = useState("");
+  const [req, setReq] = useState<{ id: number; at: number } | null>(null);
+  const [pulse, setPulse] = useState(false);
+  const loading = req !== null || parsing;
+
+  useEffect(() => {
+    if (!req || parsing) return;
+    const wait = Math.max(0, 350 - (performance.now() - req.at));
+    const show = window.setTimeout(() => {
+      setReq(null);
+      setPulse(true);
+    }, wait);
+    return () => window.clearTimeout(show);
+  }, [req, parsing]);
+
+  useEffect(() => {
+    if (!pulse) return;
+    const hide = window.setTimeout(() => setPulse(false), 650);
+    return () => window.clearTimeout(hide);
+  }, [pulse]);
+
+  const ask = (text: string) => {
+    setPulse(false);
+    setReq({ id: Date.now(), at: performance.now() });
+    onQuery(text);
+  };
 
   const toggleHood = (slug: string) =>
     onChange({
@@ -56,9 +81,9 @@ export default function IntentInput({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          onQuery(q);
+          if (!loading) ask(q);
         }}
-        className="flex items-stretch gap-2 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-line focus-within:ring-2 focus-within:ring-brand"
+        className="flex items-stretch gap-2 rounded-2xl border border-line bg-white p-2 focus-within:border-brand focus-within:shadow-[0_0_0_1px_var(--color-brand)]"
       >
         <input
           value={q}
@@ -67,8 +92,20 @@ export default function IntentInput({
           className="min-w-0 flex-1 bg-transparent px-3 py-2 text-[15px] outline-none placeholder:text-gray-400"
           aria-label="جستجوی هوشمند"
         />
-        <button type="submit" className="shrink-0 rounded-xl bg-brand px-5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60" disabled={parsing}>
-          {parsing ? "در حال فهمیدن…" : "بگرد"}
+        <button
+          type="submit"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-brand px-5 text-sm font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={loading}
+          aria-busy={loading}
+        >
+          {loading ? (
+            <>
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/35 border-t-white" aria-hidden />
+              در حال تحلیل...
+            </>
+          ) : (
+            "بگرد"
+          )}
         </button>
       </form>
 
@@ -78,9 +115,9 @@ export default function IntentInput({
             key={ex}
             onClick={() => {
               setQ(ex);
-              onQuery(ex);
+              ask(ex);
             }}
-            className="rounded-full bg-white px-3 py-1 text-xs text-muted ring-1 ring-line hover:text-brand hover:ring-brand"
+            className="rounded-full border border-line bg-white px-3 py-1 text-xs text-muted hover:border-brand hover:text-brand"
           >
             {ex}
           </button>
@@ -90,12 +127,12 @@ export default function IntentInput({
       {intent.rawQuery && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
           <span className="text-muted">برداشت ما از جملهٔ شما{intent.parsedBy === "llm" ? " (هوش مصنوعی)" : intent.parsedBy === "rules" ? " (پردازشگر فارسی)" : ""}:</span>
-          <Chip>پول نقد {fmtToman(intent.cash, { unit: false })}</Chip>
-          <Chip>اجاره تا {fmtToman(intent.maxRent, { unit: false })}</Chip>
-          {intent.minArea && <Chip>حداقل {toPersianDigits(intent.minArea)} متر</Chip>}
-          {intent.minRooms && <Chip>{toPersianDigits(intent.minRooms)} خواب+</Chip>}
-          {intent.maxBuildAge && <Chip>زیر {toPersianDigits(intent.maxBuildAge)} سال ساخت</Chip>}
-          {intent.household && <Chip>{HOUSEHOLD_FA[intent.household]}</Chip>}
+          <Chip pulse={pulse}>پول نقد {fmtToman(intent.cash, { unit: false })}</Chip>
+          <Chip pulse={pulse}>اجاره تا {fmtToman(intent.maxRent, { unit: false })}</Chip>
+          {intent.minArea && <Chip pulse={pulse}>حداقل {toPersianDigits(intent.minArea)} متر</Chip>}
+          {intent.minRooms && <Chip pulse={pulse}>{toPersianDigits(intent.minRooms)} خواب+</Chip>}
+          {intent.maxBuildAge && <Chip pulse={pulse}>زیر {toPersianDigits(intent.maxBuildAge)} سال ساخت</Chip>}
+          {intent.household && <Chip pulse={pulse}>{HOUSEHOLD_FA[intent.household]}</Chip>}
           {!llmEnabled && <span className="text-[11px] text-gray-400">بدون کلید API هم کار می‌کند</span>}
         </div>
       )}
@@ -108,7 +145,7 @@ export default function IntentInput({
             <button
               key={n.slug}
               onClick={() => toggleHood(n.slug)}
-              className={`rounded-full px-3 py-1 ring-1 ${on ? "bg-ink text-white ring-ink" : "bg-white text-ink ring-line hover:ring-ink"}`}
+              className={`rounded-full border px-3 py-1 ${on ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink"}`}
             >
               {n.fa}
             </button>
@@ -124,8 +161,8 @@ export default function IntentInput({
               key={k}
               onClick={() => cycleMust(k)}
               title="یک کلیک: ضروری | دو کلیک: ترجیحی | سه کلیک: مهم نیست"
-              className={`rounded-full px-3 py-1 ring-1 ${
-                must ? "bg-brand text-white ring-brand" : nice ? "bg-brand-soft text-brand ring-brand/40" : "bg-white text-ink ring-line hover:ring-ink"
+              className={`rounded-full border px-3 py-1 ${
+                must ? "border-brand bg-brand text-white" : nice ? "border-brand/40 bg-brand-soft text-brand" : "border-line bg-white text-ink hover:border-ink"
               }`}
             >
               {MUST_FA[k]}
@@ -138,7 +175,7 @@ export default function IntentInput({
           <button
             key={h}
             onClick={() => onChange({ ...intent, household: intent.household === h ? undefined : h })}
-            className={`rounded-full px-3 py-1 ring-1 ${intent.household === h ? "bg-ink text-white ring-ink" : "bg-white ring-line hover:ring-ink"}`}
+            className={`rounded-full border px-3 py-1 ${intent.household === h ? "border-ink bg-ink text-white" : "border-line bg-white hover:border-ink"}`}
           >
             {HOUSEHOLD_FA[h]}
           </button>
@@ -148,6 +185,6 @@ export default function IntentInput({
   );
 }
 
-function Chip({ children }: { children: React.ReactNode }) {
-  return <span className="num rounded-full bg-brand-soft px-2.5 py-1 font-medium text-brand">{children}</span>;
+function Chip({ children, pulse }: { children: React.ReactNode; pulse?: boolean }) {
+  return <span className={`num rounded-full bg-brand-soft px-2.5 py-1 font-medium text-brand ${pulse ? "chip-pulse" : ""}`}>{children}</span>;
 }

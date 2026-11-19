@@ -92,21 +92,35 @@ export default function SearchShell({ data, llmEnabled }: { data: ClientData; ll
   );
 
   const listRef = useRef<HTMLDivElement>(null);
+  const pendingScroll = useRef<string | null>(null);
   const selectFromMap = useCallback((clusterId: string) => {
+    pendingScroll.current = clusterId;
     setSelectedId(clusterId);
+    setLimit((current) => {
+      const index = out.ranked.findIndex((item) => item.cluster.clusterId === clusterId);
+      return index < 0 ? current : Math.max(current, index + 1);
+    });
+  }, [out.ranked]);
+
+  useEffect(() => {
+    const clusterId = pendingScroll.current;
+    if (!clusterId) return;
     const el = document.getElementById(`card-${clusterId}`);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, []);
+    if (!el) return;
+    pendingScroll.current = null;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [selectedId, limit]);
 
   const totalListings = data.listings.length;
   const inspected = inspectId ? [...out.ranked, ...out.rejected].find((r) => r.cluster.clusterId === inspectId) : null;
 
   return (
     <div className="min-h-screen">
+      <div className="sticky top-0 z-[1100]">
       <header className="border-b border-line bg-white">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-xl font-black text-white">ت</div>
+          <div className="flex items-center gap-2.5">
+            <img src="/torob-logo.png" alt="ترب اجاره" width={34} height={34} />
             <div>
               <h1 className="text-lg font-black leading-tight">
                 ترب <span className="text-brand">اجاره</span>
@@ -116,7 +130,7 @@ export default function SearchShell({ data, llmEnabled }: { data: ClientData; ll
           </div>
           <div className="hidden items-center gap-4 text-xs text-muted md:flex">
             <span className="num">
-              {toPersianDigits(data.stats.rawCount)} آگهی خام از دیوار، شیپور و کیلید
+              {toPersianDigits(data.stats.rawCount)} آگهی خام در بازار تهران
             </span>
             <span className="h-4 w-px bg-line" />
             <span className="num">{toPersianDigits(data.clusters.length)} ملک یکتا</span>
@@ -125,16 +139,16 @@ export default function SearchShell({ data, llmEnabled }: { data: ClientData; ll
       </header>
 
       <CashBar intent={intent} onChange={(i) => setIntent(i)} />
+      </div>
 
       <div className="mx-auto max-w-[1400px] px-4">
         <IntentInput intent={intent} parsing={parsing} llmEnabled={llmEnabled} onQuery={onQuery} onChange={setIntent} />
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-white px-4 py-2.5 text-sm shadow-sm ring-1 ring-line">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-line bg-white px-4 py-2.5 text-sm">
           <span className="font-bold num">{toPersianDigits(out.ranked.length)} ملک مناسب شما</span>
           {out.unlockedCount > 0 && (
             <span className="num text-good">
-              | {toPersianDigits(out.unlockedCount)} تا فقط با تبدیل ودیعه باز شدند
-              <span className="text-muted"> (فیلتر دیوار نشانشان نمی‌داد)</span>
+              | {toPersianDigits(out.unlockedCount)} تا با تبدیل نقدینگی شما باز شد
             </span>
           )}
           <span className="num text-muted">
@@ -150,7 +164,7 @@ export default function SearchShell({ data, llmEnabled }: { data: ClientData; ll
         <div className="mt-4 grid grid-cols-1 gap-4 pb-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
           <div ref={listRef} className="flex flex-col gap-3">
             {out.ranked.length === 0 && (
-              <div className="rounded-2xl bg-white p-8 text-center ring-1 ring-line">
+              <div className="rounded-2xl border border-line bg-white p-8 text-center">
                 <p className="text-lg font-bold">با این پول و سقف اجاره چیزی پیدا نشد</p>
                 <p className="mt-2 text-sm text-muted">
                   اسلایدر پول نقد یا سقف اجاره را کمی جابه‌جا کنید؛ بیشترین دلیل حذف:{" "}
@@ -175,14 +189,14 @@ export default function SearchShell({ data, llmEnabled }: { data: ClientData; ll
             {out.ranked.length > limit && (
               <button
                 onClick={() => setLimit((l) => l + PAGE)}
-                className="rounded-xl bg-white py-3 text-sm font-bold text-brand ring-1 ring-line hover:bg-brand-soft"
+                className="rounded-xl border border-line bg-white py-3 text-sm font-bold text-brand hover:border-brand hover:bg-brand-soft"
               >
                 نمایش {toPersianDigits(Math.min(PAGE, out.ranked.length - limit))} ملک دیگر
               </button>
             )}
 
             {out.rejected.length > 0 && (
-              <div className="rounded-2xl bg-white ring-1 ring-line">
+              <div className="rounded-2xl border border-line bg-white">
                 <button onClick={() => setShowRejected((s) => !s)} className="flex w-full items-center justify-between px-4 py-3 text-sm">
                   <span className="font-bold num">{toPersianDigits(out.rejected.length)} ملک حذف‌شده و دلیلش</span>
                   <span className="text-muted">{showRejected ? "بستن" : "نمایش"}</span>
@@ -215,7 +229,7 @@ export default function SearchShell({ data, llmEnabled }: { data: ClientData; ll
           <div
             className={`${
               mobileMap ? "fixed inset-x-0 bottom-0 z-[1000] h-[70vh] rounded-t-3xl bg-white p-2 shadow-2xl" : "hidden"
-            } lg:sticky lg:top-[156px] lg:block lg:h-[calc(100vh-172px)] lg:p-0 lg:shadow-none`}
+            } lg:sticky lg:top-[168px] lg:block lg:h-[calc(100vh-184px)] lg:p-0 lg:shadow-none`}
           >
             <MarketMap
               data={data}
@@ -229,9 +243,15 @@ export default function SearchShell({ data, llmEnabled }: { data: ClientData; ll
         </div>
       </div>
 
+      <footer className="mt-6 border-t border-line bg-white pb-20 lg:pb-0">
+        <p className="mx-auto max-w-[1400px] px-4 py-3 text-center text-[11px] leading-6 text-muted">
+          نمونه‌ی آزمایشی ساخته‌شده برای چالش AI Product Engineer ترب
+        </p>
+      </footer>
+
       <button
         onClick={() => setMobileMap((m) => !m)}
-        className="fixed bottom-4 left-1/2 z-[1001] -translate-x-1/2 rounded-full bg-ink px-5 py-3 text-sm font-bold text-white shadow-lg lg:hidden"
+        className="fixed bottom-4 left-1/2 z-[1001] -translate-x-1/2 rounded-full bg-brand px-5 py-3 text-sm font-bold text-white shadow-lg lg:hidden"
       >
         {mobileMap ? "بستن نقشه" : "نمایش روی نقشه"}
       </button>

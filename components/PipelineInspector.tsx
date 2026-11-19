@@ -72,7 +72,7 @@ export default function PipelineInspector({
               {toPersianDigits(listing.areaM2)} متر | {NEIGHBORHOOD_BY_SLUG[listing.neighborhood]?.fa} | {toPersianDigits(result.cluster.memberIds.length)} آگهی
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-sm ring-1 ring-line hover:bg-gray-50">
+          <button onClick={onClose} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-gray-50">
             بستن
           </button>
         </div>
@@ -209,7 +209,7 @@ function NormalizedTab({ l }: { l: NormalizedListing }) {
         </tbody>
       </table>
 
-      <div className="rounded-xl ring-1 ring-line">
+      <div className="rounded-xl border border-line">
         <div className="border-b border-line px-3 py-2 text-xs font-bold">تبدیل ودیعه و اجاره</div>
         <div className="num space-y-1 px-3 py-2 text-xs">
           {l.convert.mode === "none" ? (
@@ -217,7 +217,7 @@ function NormalizedTab({ l }: { l: NormalizedListing }) {
           ) : (
             <>
               <p>
-                منبع: <b>{l.convert.mode === "form" ? "تیک فرم دیوار" : "فقط در متن آگهی (فیلتر دیوار این را نمی‌بیند)"}</b>
+                منبع: <b>{l.convert.mode === "form" ? "گزینهٔ تبدیل در فرم آگهی" : "فقط در متن آگهی"}</b>
               </p>
               <p>
                 بازهٔ ودیعه: {fmtToman(l.convert.minDeposit)} تا {fmtToman(l.convert.maxDeposit)}
@@ -229,7 +229,7 @@ function NormalizedTab({ l }: { l: NormalizedListing }) {
         </div>
       </div>
 
-      <div className="rounded-xl ring-1 ring-line">
+      <div className="rounded-xl border border-line">
         <div className="border-b border-line px-3 py-2 text-xs font-bold">پرچم‌های قرمز پنهان در متن</div>
         <div className="space-y-1 px-3 py-2 text-xs">
           {l.redFlags.length === 0 ? (
@@ -282,12 +282,12 @@ function ClusterTab({
             const cost = marketMonthly(l.deposit, l.rent, rate);
             const best = m.listingId === c.bestMemberId;
             return (
-              <tr key={m.listingId} className={`border-t border-line align-top ${best ? "bg-good-soft" : ""}`}>
+              <tr key={m.listingId} className={`border-t border-line align-top ${best ? "bg-brand-soft" : ""}`}>
                 <td className="py-2">
                   <button onClick={() => onPick(m.listingId)} className="text-start hover:text-brand">
                     <b>{SOURCE_FA[l.source]}</b> | {l.advertiser.kind === "owner" ? "مالک" : l.advertiser.name}
                   </button>
-                  {best && <div className="text-[10px] font-bold text-good">ارزان‌ترین</div>}
+                  {best && <div className="mt-1 inline-block rounded bg-brand px-1.5 py-0.5 text-[10px] font-bold text-white">ارزان‌ترین</div>}
                 </td>
                 <td className="num py-2">
                   {fmtToman(l.deposit, { unit: false })} + {l.rent ? fmtToman(l.rent, { unit: false }) : "۰"}

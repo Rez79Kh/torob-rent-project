@@ -20,7 +20,9 @@ function rankIcon(rank: number, color: string, active: boolean) {
     iconAnchor: [size / 2, size / 2],
     html: `<div style="width:${size}px;height:${size}px;border-radius:999px;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font:900 ${
       active ? 14 : 12
-    }px Vazirmatn;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)">${toPersianDigits(rank)}</div>`,
+    }px Vazirmatn;font-variant-numeric:tabular-nums;font-feature-settings:'tnum';border:3px solid #fff;box-shadow:${
+      active ? "0 0 0 3px #f31d3a, 0 2px 6px rgba(0,0,0,.35)" : "0 2px 6px rgba(0,0,0,.35)"
+    }">${toPersianDigits(rank)}</div>`,
   });
 }
 
@@ -79,8 +81,8 @@ export default function MarketMap({
   const activeResult = ranked.find((r) => r.cluster.clusterId === activeId);
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-2xl ring-1 ring-line">
-      <MapContainer center={[35.745, 51.43]} zoom={12} scrollWheelZoom className="h-full w-full" attributionControl>
+    <div className="relative h-full w-full overflow-hidden rounded-2xl border border-line bg-white">
+      <MapContainer center={[35.745, 51.43]} zoom={12} scrollWheelZoom className="h-full w-full" attributionControl={false}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -117,10 +119,10 @@ export default function MarketMap({
           const active = id === activeId;
           return (
             <CircleMarker
-              key={id}
+              key={`${id}-${active ? "on" : "off"}`}
               center={[r.listing.geo.lat, r.listing.geo.lng]}
               radius={active ? 10 : 6}
-              pathOptions={{ color: "#fff", weight: 2, fillColor: color, fillOpacity: active ? 1 : 0.8 }}
+              pathOptions={{ color: active ? "#f31d3a" : "#fff", weight: active ? 3 : 2, fillColor: active ? "#f31d3a" : color, fillOpacity: 1 }}
               eventHandlers={{ mouseover: () => onHover(id), mouseout: () => onHover(null), click: () => onSelect(id) }}
             >
               <Tooltip className="price-tip">
@@ -138,9 +140,9 @@ export default function MarketMap({
           const active = id === activeId;
           return (
             <Marker
-              key={id}
+              key={`${id}-${active ? "on" : "off"}`}
               position={[r.listing.geo.lat, r.listing.geo.lng]}
-              icon={rankIcon(rank, active ? "#d6283b" : COLOR[fairBand(r.fairDeltaPct)], active)}
+              icon={rankIcon(rank, active || rank === 1 ? "#f31d3a" : COLOR[fairBand(r.fairDeltaPct)], active)}
               zIndexOffset={active ? 1000 : 500 - rank}
               eventHandlers={{ mouseover: () => onHover(id), mouseout: () => onHover(null), click: () => onSelect(id) }}
             >
@@ -154,14 +156,14 @@ export default function MarketMap({
         })}
       </MapContainer>
 
-      <div className="pointer-events-none absolute bottom-3 right-3 z-[500] rounded-xl bg-white/95 px-3 py-2 text-[11px] shadow ring-1 ring-line">
+      <div className="pointer-events-none absolute bottom-3 right-3 z-[500] rounded-xl border border-line bg-white px-3 py-2 text-[11px]">
         <div className="mb-1 font-bold">نسبت به میانگین محله</div>
         <div className="flex items-center gap-3">
           <Legend color={COLOR.good} label="زیر میانگین" />
           <Legend color={COLOR.fair} label="منصفانه" />
           <Legend color={COLOR.high} label="گران" />
         </div>
-        <div className="mt-1 text-muted">موقعیت‌ها تقریبی است (مثل خود دیوار)</div>
+        <div className="mt-1 text-muted">محدودهٔ تقریبی ملک روی نقشه</div>
       </div>
     </div>
   );

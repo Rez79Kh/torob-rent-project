@@ -2,11 +2,11 @@
 
 @theme {
   --font-sans: "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
-  --color-brand: #d6283b;
-  --color-brand-soft: #fdecee;
+  --color-brand: #f31d3a;
+  --color-brand-soft: #fff1f3;
   --color-ink: #1f2430;
   --color-muted: #6b7280;
-  --color-line: #e8e9ee;
+  --color-line: #e5e7eb;
   --color-good: #0f9d58;
   --color-good-soft: #e7f6ee;
   --color-bad: #d93025;
@@ -19,11 +19,31 @@ html,
 body {
   background: #f6f7f9;
   color: var(--color-ink);
-  font-feature-settings: "ss01";
+  /* tnum selects Vazirmatn's equal-width Persian digits (۰–۹), so slider amounts don't jitter. */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 .num {
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+@keyframes chip-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(243 29 58 / 0);
+  }
+  35% {
+    box-shadow: 0 0 0 4px rgb(243 29 58 / 0.22);
+    background-color: #ffe4e6;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(243 29 58 / 0);
+  }
+}
+
+.chip-pulse {
+  animation: chip-pulse 650ms ease-out;
 }
 
 input[type="range"].cash-range {
@@ -61,13 +81,21 @@ input[type="range"].cash-range::-moz-range-thumb {
 
 .leaflet-container {
   font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+.leaflet-control-attribution {
+  display: none !important;
 }
 .leaflet-tooltip.price-tip {
   direction: rtl;
   font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
   font-size: 12px;
   padding: 2px 6px;
   border-radius: 6px;
+  border: 1px solid #e5e7eb;
 }
 
 .scroll-thin::-webkit-scrollbar {

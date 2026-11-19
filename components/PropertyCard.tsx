@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import type { ClientData } from "@/lib/data";
 import { NEIGHBORHOOD_BY_SLUG } from "@/lib/geo";
 import { fmtToman } from "@/lib/money";
@@ -37,12 +37,8 @@ function PropertyCard({
   const l = r.listing;
   const hood = NEIGHBORHOOD_BY_SLUG[l.neighborhood];
   const stats = data.neighborhoods.find((n) => n.slug === l.neighborhood);
-  const members = r.cluster.memberIds.length;
-  const sources = r.cluster.memberIds.reduce<Record<string, number>>((acc, id) => {
-    const src = data.listings.find((x) => x.id === id)?.source ?? "divar";
-    acc[src] = (acc[src] ?? 0) + 1;
-    return acc;
-  }, {});
+  const [compareOpen, setCompareOpen] = useState(false);
+  const members = r.cluster.members.length;
   const converted = r.chosenDeposit !== l.deposit;
   const age = l.buildYear ? CURRENT_JALALI_YEAR - l.buildYear : null;
   const id = r.cluster.clusterId;
@@ -52,7 +48,7 @@ function PropertyCard({
       id={`card-${id}`}
       onMouseEnter={() => onHover(id)}
       onMouseLeave={() => onHover(null)}
-      className={`rounded-2xl bg-white p-4 shadow-sm ring-1 transition ${active ? "ring-2 ring-brand" : "ring-line hover:ring-gray-300"}`}
+      className={`scroll-mt-40 rounded-2xl border bg-white p-4 transition ${active ? "border-[#f31d3a] ring-2 ring-[#f31d3a]" : "border-line hover:border-[#d1d5db]"}`}
     >
       <div className="flex items-start gap-3">
         <div
@@ -68,7 +64,7 @@ function PropertyCard({
               {toPersianDigits(l.areaM2)} متر | {l.rooms === 0 ? "سوئیت" : `${toPersianDigits(l.rooms)} خواب`} | {hood?.fa}
             </h2>
             {r.unlockedByConversion && (
-              <span className="rounded-md bg-good px-2 py-0.5 text-[11px] font-bold text-white" title="با فیلتر ودیعه/اجارهٔ دیوار دیده نمی‌شد">
+              <span className="rounded-md bg-good px-2 py-0.5 text-[11px] font-bold text-white" title="با تبدیل نقدینگی شما باز شد">
                 فقط با تبدیل پیدا شد
               </span>
             )}
@@ -78,6 +74,16 @@ function PropertyCard({
               </span>
             )}
             {l.isSeed && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-400">دادهٔ نمونه</span>}
+            {members > 1 && (
+              <button
+                type="button"
+                onClick={() => setCompareOpen((open) => !open)}
+                aria-expanded={compareOpen}
+                className="num inline-flex items-center rounded-full bg-brand px-2.5 py-1 text-[11px] font-bold text-white hover:opacity-90"
+              >
+                در {toPersianDigits(members)} آگهی · صرفه‌جویی {fmtToman(r.cluster.priceSpread.savings, { unit: false })}
+              </button>
+            )}
           </div>
           <p className="mt-0.5 truncate text-xs text-muted" title={l.title}>
             {l.title}
@@ -113,20 +119,43 @@ function PropertyCard({
         </div>
       </div>
 
-      {members > 1 && (
-        <div className="num mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-dashed border-brand/30 px-3 py-2 text-[13px]">
-          <b className="text-brand">همین ملک در {toPersianDigits(members)} آگهی</b>
-          <span className="text-muted">
-            ({Object.entries(sources)
-              .map(([s, n]) => `${SOURCE_FA[s as Source]} ${toPersianDigits(n)}`)
-              .join("، ")})
-          </span>
-          <span>
-            از {fmtToman(r.cluster.priceSpread.minEffective, { unit: false })} تا {fmtToman(r.cluster.priceSpread.maxEffective, { unit: false })}
-          </span>
-          {r.cluster.priceSpread.savings > 0 && (
-            <span className="font-bold text-good">صرفه‌جویی {fmtToman(r.cluster.priceSpread.savings, { unit: false })} در ماه بین آگهی‌های همین واحد</span>
-          )}
+      {members > 1 && compareOpen && (
+        <div className="mt-3 overflow-x-auto rounded-xl border border-line">
+          <table className="w-full min-w-[28rem] text-xs">
+            <thead>
+              <tr className="bg-gray-50 text-muted">
+                <th className="px-3 py-2 text-start font-normal">منبع</th>
+                <th className="px-3 py-2 text-start font-normal">آژانس</th>
+                <th className="px-3 py-2 text-start font-normal">رهن + اجاره</th>
+                <th className="px-3 py-2 text-start font-normal">آگهی</th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.cluster.members.map((member) => {
+                const row = data.listings.find((item) => item.id === member.listingId);
+                if (!row) return null;
+                const agency = row.advertiser.kind === "owner" ? "مالک" : (row.advertiser.name ?? "آژانس");
+                return (
+                  <tr key={member.listingId} className="border-t border-line">
+                    <td className="px-3 py-2 font-bold">{SOURCE_FA[row.source]}</td>
+                    <td className="px-3 py-2">{agency}</td>
+                    <td className="num px-3 py-2">
+                      {fmtToman(row.deposit, { unit: false })} + {row.rent ? fmtToman(row.rent, { unit: false }) : "۰"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {row.url ? (
+                        <a href={row.url} target="_blank" rel="noreferrer" className="font-bold text-brand hover:underline">
+                          مشاهده
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -181,7 +210,7 @@ function PropertyCard({
 }
 
 function Amenity({ on, label }: { on: boolean; label: string }) {
-  return <span className={on ? "text-ink" : "text-gray-300 line-through"}>{label}</span>;
+  return <span className={on ? "text-ink" : "text-slate-400 line-through"}>{label}</span>;
 }
 
 export default memo(PropertyCard);
